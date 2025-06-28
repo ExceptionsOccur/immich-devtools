@@ -52,6 +52,7 @@ jobs:
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
       key: ${{ steps.artifact-key.outputs.base }}
+      lowercase_owner: ${{ steps.get-lowercase-owner.outputs.lowercase_owner }}
     steps:
       - name: Generate build matrix
         id: matrix
@@ -76,6 +77,15 @@ jobs:
           base="${IMAGE}${SUFFIX}-digests"
           echo "base=${base}" | tee -a $GITHUB_OUTPUT
 
+      - name: Get lowercase repository owner
+        id: get-lowercase-owner
+        shell: bash
+        run: |
+          LOWERCASE_OWNER=$(echo "${GITHUB_REPOSITORY_OWNER}" | awk '{print tolower($0)}')
+          echo "lowercase_owner=${LOWERCASE_OWNER}" >> "$GITHUB_OUTPUT"
+         env:
+          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+
   build:
     needs: matrix
     runs-on: ${{ matrix.runner }}
@@ -91,6 +101,10 @@ jobs:
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
         with:
           persist-credentials: false
+
+      - name: Set GHCR_IMAGE with lowercase owner
+        run: |
+          echo "GHCR_IMAGE=ghcr.io/${{ needs.matrix.outputs.lowercase_owner }}/${{ inputs.image }}" >> $GITHUB_ENV
 
       - uses: immich-app/devtools/actions/image-build@7d95e52a7a597ce005a306d6891467fc15427b69 # image-build-action-0.1.1
         with:
@@ -119,12 +133,16 @@ jobs:
           pattern: ${{ needs.matrix.outputs.key }}-*
           merge-multiple: true
 
-      - name: Login to Docker Hub
-        if: ${{ inputs.dockerhub-push }}
-        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      # - name: Login to Docker Hub
+      #   if: ${{ inputs.dockerhub-push }}
+      #   uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+      #   with:
+      #     username: ${{ secrets.DOCKERHUB_USERNAME }}
+      #     password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set GHCR_IMAGE with lowercase owner
+        run: |
+          echo "GHCR_IMAGE=ghcr.io/${{ needs.matrix.outputs.lowercase_owner }}/${{ inputs.image }}" >> $GITHUB_ENV
 
       - name: Login to GHCR
         uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
