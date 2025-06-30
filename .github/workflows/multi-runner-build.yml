@@ -83,7 +83,7 @@ jobs:
         run: |
           LOWERCASE_OWNER=$(echo "${GITHUB_REPOSITORY_OWNER}" | awk '{print tolower($0)}')
           echo "lowercase_owner=${LOWERCASE_OWNER}" >> "$GITHUB_OUTPUT"
-         env:
+        env:
           GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
 
   build:
